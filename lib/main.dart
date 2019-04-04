@@ -261,7 +261,7 @@ class RandomWordState extends State<MyHomePage> {
     showDialog<void>(
         context: context,
         builder: (context) {
-          if (permissionStatus != PermissionStatus.granted) {
+          if (permissionStatus != PermissionStatus.granted && permissionStatus != PermissionStatus.unknown) {
             return AlertDialog(
               title: Text("提醒"),
               content: SingleChildScrollView(
