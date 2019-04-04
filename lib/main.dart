@@ -33,6 +33,9 @@ class MyApp extends StatelessWidget {
             appBar: AppBar(),
             url: "http://www.baidu.com",
             withJavascript: true,
+            initialChild: Center(
+              child: Text("wait.."),
+            ),
           );
         }
       },
