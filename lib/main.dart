@@ -1,3 +1,4 @@
+import 'package:ease_life_flutter/InterfaceTestPage.dart';
 import 'package:flutter/material.dart';
 import 'package:english_words/english_words.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -54,6 +55,9 @@ class MyApp extends StatelessWidget {
         },
         "/camera": (context) {
           return CameraApp(cameras);
+        },
+        "/interface": (context) {
+          return InterfacePage();
         }
       },
     );
@@ -232,6 +236,23 @@ class RandomWordState extends State<MyHomePage> {
       childAspectRatio: 0.5,
       crossAxisCount: 3,
       children: <Widget>[
+        Card(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              FlutterLogo(
+                size: 40.0,
+              ),
+              Center(child: Title(color: Colors.cyan, child: Text("接口测试"))),
+              OutlineButton(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed("/interface");
+                  },
+                  child: Text("立即前往"))
+            ],
+          ),
+        ),
         Card(
           child: Column(
             mainAxisSize: MainAxisSize.min,
