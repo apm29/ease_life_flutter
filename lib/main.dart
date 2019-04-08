@@ -2,8 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:english_words/english_words.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
+import 'camera.dart';
+import 'package:camera/camera.dart';
+import 'package:android_intent/android_intent.dart';
+import 'package:platform/platform.dart';
+import 'package:device_info/device_info.dart';
+import 'package:package_info/package_info.dart';
+import 'package:flutter/rendering.dart';
 
-void main() => runApp(MyApp());
+List<CameraDescription> cameras;
+
+void main() async {
+  cameras = await availableCameras();
+  runApp(MyApp());
+}
+
+final flutterWebViewPlugin = new FlutterWebviewPlugin();
 
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
@@ -30,13 +44,16 @@ class MyApp extends StatelessWidget {
         },
         "/web": (context) {
           return WebviewScaffold(
+            enableAppScheme: true,
+            withZoom: false,
+            geolocationEnabled: true,
             appBar: AppBar(),
             url: "http://www.baidu.com",
             withJavascript: true,
-            initialChild: Center(
-              child: Text("wait.."),
-            ),
           );
+        },
+        "/camera": (context) {
+          return CameraApp(cameras);
         }
       },
     );
@@ -44,9 +61,7 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key) {
-    print("create statefulWidget");
-  }
+  MyHomePage({Key key, this.title}) : super(key: key);
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -125,13 +140,90 @@ class RandomWordState extends State<MyHomePage> {
   }
 
   Widget buildMessageBody() {
-    return OutlineButton(
-      padding: EdgeInsets.all(0.0),
-      textTheme: ButtonTextTheme.primary,
-      onPressed: (){
-        Navigator.of(context).pushNamed("/web");
-      },
-      child: Text("web"),
+    return ListView(
+      children: <Widget>[
+        OutlineButton(
+          padding: EdgeInsets.all(8.0),
+          textTheme: ButtonTextTheme.primary,
+          onPressed: () {
+            Navigator.of(context).pushNamed("/web");
+          },
+          child: Text("web"),
+        ),
+        OutlineButton(
+          padding: EdgeInsets.all(8.0),
+          textTheme: ButtonTextTheme.primary,
+          onPressed: () {
+            Navigator.of(context).pushNamed("/camera");
+          },
+          child: Text("camera"),
+        ),
+        OutlineButton(
+          padding: EdgeInsets.all(8.0),
+          textTheme: ButtonTextTheme.primary,
+          onPressed: () async {
+            if (LocalPlatform().isAndroid) {
+              AndroidIntent intent = AndroidIntent(
+                  action: 'android.intent.action.PICK',
+                  data: "content://com.android.contacts/data/phones");
+              await intent.launch();
+            }
+          },
+          child: Text("android intent"),
+        ),
+        OutlineButton(
+          padding: EdgeInsets.all(8.0),
+          textTheme: ButtonTextTheme.primary,
+          onPressed: () async {
+            var infoPlugin = DeviceInfoPlugin();
+            var infoDesc;
+            if (LocalPlatform().isAndroid) {
+              AndroidDeviceInfo info = await infoPlugin.androidInfo;
+              infoDesc = info.androidId;
+            } else {
+              IosDeviceInfo info = await infoPlugin.iosInfo;
+              infoDesc = info.identifierForVendor;
+            }
+            showModalBottomSheet(
+                context: context,
+                builder: (context) {
+                  return BottomSheet(
+                    onClosing: () {},
+                    builder: (context) {
+                      return Container(
+                        height: 200.0,
+                        child: Center(child: Text(infoDesc.toString())),
+                      );
+                    },
+                  );
+                });
+          },
+          child: Text("device info"),
+        ),
+        OutlineButton(
+          padding: EdgeInsets.all(8.0),
+          textTheme: ButtonTextTheme.primary,
+          onPressed: () async {
+            PackageInfo packageInfo = await PackageInfo.fromPlatform();
+            showModalBottomSheet(
+                context: context,
+                builder: (context) {
+                  return BottomSheet(
+                    onClosing: () {},
+                    builder: (context) {
+                      return Container(
+                        height: 200.0,
+                        child: Center(
+                            child: Text(
+                                "appName:${packageInfo.appName}\nappVersion:${packageInfo.version}\npackageName:${packageInfo.packageName}\nbuildNum:${packageInfo.buildNumber}")),
+                      );
+                    },
+                  );
+                });
+          },
+          child: Text("package info"),
+        ),
+      ],
     );
   }
 
@@ -247,6 +339,24 @@ class RandomWordState extends State<MyHomePage> {
             ],
           ),
         ),
+        Card(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              FlutterLogo(
+                size: 40.0,
+              ),
+              Center(child: Title(color: Colors.cyan, child: Text("请求权限"))),
+              OutlineButton(
+                  onPressed: () async {
+                    await requestPermission(
+                        context, PermissionGroup.storage, "存储权限");
+                  },
+                  child: Text("存储权限"))
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -261,7 +371,8 @@ class RandomWordState extends State<MyHomePage> {
     showDialog<void>(
         context: context,
         builder: (context) {
-          if (permissionStatus != PermissionStatus.granted && permissionStatus != PermissionStatus.unknown) {
+          if (permissionStatus != PermissionStatus.granted &&
+              permissionStatus != PermissionStatus.unknown) {
             return AlertDialog(
               title: Text("提醒"),
               content: SingleChildScrollView(
